@@ -25,18 +25,5 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo "Deploying application..."
-                sh 'echo "Deploy to staging server or container here"'
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "Build succeeded!"
-        }
-        failure {
-            echo "Build failed!"
-        }
-    }
-}
+                echo "Deplo
+                
