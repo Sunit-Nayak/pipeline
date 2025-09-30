@@ -4,7 +4,8 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Sunit-Nayak/pipeline/new/main/pipeline.git'
+                git branch: 'main', url: 'https://github.com/Sunit-Nayak/pipeline.git
+'
             }
         }
 
