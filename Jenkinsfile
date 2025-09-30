@@ -2,28 +2,31 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/Sunit-Nayak/pipeline.git
-'
-            }
-        }
-
         stage('Build') {
             steps {
-                echo "Building the project..."
-                sh 'echo "Compile code here (Maven/Gradle/npm)"'
+                echo 'Building project...'
             }
         }
 
         stage('Test') {
             steps {
-                echo "Running tests..."
-                sh 'echo "Run unit tests here"'
+                echo 'Running tests...'
             }
         }
 
         stage('Deploy') {
             steps {
-                echo "Deplo
-                
+                echo 'Deploying project...'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
