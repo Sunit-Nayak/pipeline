@@ -1,5 +1,5 @@
-stage('Run Java App') {
-    steps {
-        sh 'java -cp out HelloWorld' 
+public class HelloWorld {
+    public static void main(String[] args) {
+        System.out.println("Hello from Jenkins Pipeline!");
     }
 }
