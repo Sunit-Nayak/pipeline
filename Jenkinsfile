@@ -10,13 +10,14 @@ pipeline {
 
         stage('Build') {
             steps {
+                sh 'chmod +x build.sh'
                 sh './build.sh'
             }
         }
 
         stage('Run Java App') {
             steps {
-                sh 'java -cp out HelloWorld'
+                sh 'java -cp out Helloworld'
             }
         }
     }
