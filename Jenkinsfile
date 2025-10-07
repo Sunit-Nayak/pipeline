@@ -68,11 +68,3 @@ echo "App did not become healthy"; exit 1
 if [ -f app.pid ]; then
   PID=$(cat app.pid) || true
   if [ -n "$PID" ] && ps -p "$PID" >/dev/null 2>&1; then
-    kill "$PID" || true
-    sleep 2
-  fi
-fi
-'''
-    }
-  }
-}
