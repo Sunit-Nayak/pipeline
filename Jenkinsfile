@@ -1,3 +1,4 @@
+
 pipeline {
   agent any
   options { timestamps() }
@@ -10,8 +11,8 @@ pipeline {
     stage('Prepare sources') {
       steps {
         sh '''
-set -eu
-if [ ! -d src ] || ! find src -type f -name "*.java" -print -quit | grep -q .; then
+# Create a demo source only if no Java files exist in src/
+if ! find src -type f -name "*.java" -print -quit 2>/dev/null | grep -q .; then
   mkdir -p pipeline/src
   cat > pipeline/src/Main.java <<'EOF'
 public class Main {
@@ -20,9 +21,9 @@ public class Main {
   }
 }
 EOF
-  echo DEMO=1 > .build_mode
+  echo "Created demo source at pipeline/src/Main.java"
 else
-  echo DEMO=0 > .build_mode
+  echo "Using existing sources under src/"
 fi
 '''
       }
@@ -33,35 +34,36 @@ fi
         sh '''
 set -eu
 mkdir -p target/classes
-. .build_mode || true
 
-if [ "${DEMO:-0}" = "1" ]; then
+if [ -f pipeline/src/Main.java ]; then
+  # Demo single-file build
   javac -d target/classes pipeline/src/Main.java
   echo "Main-Class: Main" > target/manifest.mf
 else
-  # Compile any Java files under src/ (works with or without Maven layout)
-  find src -type f -name "*.java" -print -quit | grep -q .
-  javac -d target/classes $(find src -type f -name "*.java")
-  # TODO: change to your real entry class when you have one:
+  # Generic compile for any src/* Java tree
+  SRC_LIST="$(find src -type f -name "*.java")"
+  [ -n "$SRC_LIST" ] || { echo "No Java sources found"; exit 1; }
+  javac -d target/classes $SRC_LIST
+  # TODO: change to your actual entry class when you have one:
   echo "Main-Class: com.example.Main" > target/manifest.mf
 fi
 
-jar cfm target/myapp.jar target/manifest.mf -C target/classes .
-ls -lh target/myapp.jar
+jar cfm target/app.jar target/manifest.mf -C target/classes .
+ls -lh target/app.jar
 '''
       }
     }
 
     stage('Run JAR') {
       steps {
-        sh '''
-set -eu
-java -jar target/myapp.jar
-'''
+        sh 'java -jar target/app.jar'
       }
     }
   }
 
   post {
     always {
-      archiveArtifacts artifacts: 'target/myapp.jar', allowEmptyArchive: t
+      archiveArtifacts artifacts: 'target/app.jar', allowEmptyArchive: true
+    }
+  }
+}
