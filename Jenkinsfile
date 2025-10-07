@@ -1,40 +1,51 @@
 pipeline {
   agent any
   options { timestamps() }
-  environment {
-    APP_JAR = 'target/myapp.jar'
-  }
+
   stages {
-    stage('Checkout') { steps { checkout scm } }
+    stage('Checkout') {
+      steps { checkout scm }
+    }
 
     stage('Compile & Package (no build tool)') {
       steps {
-        sh '''
-          set -euxo pipefail
-          mkdir -p target/classes
-          # compile all .java under src/main/java
-          javac -d target/classes $(find src/main/java -name '*.java')
+        sh '''#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p target/classes
 
-          # create manifest with the entrypoint
-          echo "Main-Class: com.example.Main" > target/manifest.mf
+# ensure we have sources
+if ! find src/main/java -name '*.java' -print -quit | grep -q .; then
+  echo "No .java sources under src/main/java"; exit 1
+fi
 
-          # package into a runnable jar
-          jar cfm target/myapp.jar target/manifest.mf -C target/classes .
-          ls -lh target/myapp.jar
-        '''
+# compile
+javac -d target/classes $(find src/main/java -name '*.java')
+
+# add a manifest with the entry point (change if your main class differs)
+echo "Main-Class: com.example.Main" > target/manifest.mf
+
+# create runnable jar
+jar cfm target/myapp.jar target/manifest.mf -C target/classes .
+ls -lh target/myapp.jar
+'''
       }
     }
 
     stage('Run JAR') {
       steps {
-        sh '''
-          test -f "$APP_JAR" || { echo "Jar not found: $APP_JAR"; exit 1; }
-          java -jar "$APP_JAR"
-        '''
+        sh '''#!/usr/bin/env bash
+set -euo pipefail
+test -f target/myapp.jar || { echo "Jar not found"; exit 1; }
+java -jar target/myapp.jar
+'''
       }
     }
   }
+
   post {
-    always { archiveArtifacts artifacts: 'target/myapp.jar', allowEmptyArchive: true }
+    always {
+      archiveArtifacts artifacts: 'target/myapp.jar', allowEmptyArchive: true
+    }
   }
 }
+
