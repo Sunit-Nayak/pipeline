@@ -74,28 +74,4 @@ javac -d target/classes $(find pipeline/src/Main.java -name '*.java')
 # add a manifest with the entry point (change if your main class differs)
 echo "Main-Class: com.example.Main" > target/manifest.mf
 
-# create runnable jar
-jar cfm target/myapp.jar target/manifest.mf -C target/classes .
-ls -lh target/myapp.jar
-'''
-      }
-    }
-
-    stage('Run JAR') {
-      steps {
-        sh '''#!/usr/bin/env bash
-set -euo pipefail
-test -f target/myapp.jar || { echo "Jar not found"; exit 1; }
-java -jar target/myapp.jar
-'''
-      }
-    }
-  }
-
-  post {
-    always {
-      archiveArtifacts artifacts: 'target/myapp.jar', allowEmptyArchive: true
-    }
-  }
-}
-
+java -jar target/myap
