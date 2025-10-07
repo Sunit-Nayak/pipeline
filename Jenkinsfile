@@ -7,12 +7,11 @@ pipeline {
       steps { checkout scm }
     }
 
-    // Create a demo Java file if none exist so the job succeeds end-to-end
     stage('Prepare sources') {
       steps {
         sh '''
 set -eu
-if ! find src -name "*.java" -print -quit >/dev/null 2>&1 && [ ! -f pipeline/src/Main.java ]; then
+if [ ! -d src ] || ! find src -type f -name "*.java" -print -quit | grep -q .; then
   mkdir -p pipeline/src
   cat > pipeline/src/Main.java <<'EOF'
 public class Main {
@@ -21,9 +20,9 @@ public class Main {
   }
 }
 EOF
-  echo "Created demo source at pipeline/src/Main.java"
+  echo DEMO=1 > .build_mode
 else
-  echo "Using existing sources"
+  echo DEMO=0 > .build_mode
 fi
 '''
       }
@@ -34,21 +33,21 @@ fi
         sh '''
 set -eu
 mkdir -p target/classes
+. .build_mode || true
 
-if [ -f pipeline/src/Main.java ]; then
-  # Compile single-file demo
+if [ "${DEMO:-0}" = "1" ]; then
   javac -d target/classes pipeline/src/Main.java
   echo "Main-Class: Main" > target/manifest.mf
 else
-  # Compile your real sources (Maven-style tree)
-  find src/main/java -name "*.java" -print -quit >/dev/null || { echo "No Java sources found"; exit 1; }
-  javac -d target/classes $(find src/main/java -name "*.java")
-  # TODO: change to your real main class if different:
+  # Compile any Java files under src/ (works with or without Maven layout)
+  find src -type f -name "*.java" -print -quit | grep -q .
+  javac -d target/classes $(find src -type f -name "*.java")
+  # TODO: change to your real entry class when you have one:
   echo "Main-Class: com.example.Main" > target/manifest.mf
 fi
 
 jar cfm target/myapp.jar target/manifest.mf -C target/classes .
-echo "Built target/myapp.jar"
+ls -lh target/myapp.jar
 '''
       }
     }
