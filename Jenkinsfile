@@ -64,7 +64,4 @@ java -jar target/myapp.jar
 
   post {
     always {
-      archiveArtifacts artifacts: 'target/myapp.jar', allowEmptyArchive: true
-    }
-  }
-}
+      archiveArtifacts artifacts: 'target/myapp.jar', allowEmptyArchive: t
