@@ -1,69 +1,78 @@
-
 pipeline {
   agent any
   options { timestamps() }
+  tools { nodejs 'node18' }   // <- the name you configured
+
+  environment {
+    NODE_FILE = 'app.js'      // change if your file is e.g. server.js
+    APP_PORT  = '8081'        // change to your app's port
+  }
 
   stages {
-    stage('Checkout') {
-      steps { checkout scm }
-    }
+    stage('Checkout') { steps { checkout scm } }
 
-    stage('Prepare sources') {
-      steps {
-        sh '''
-# Create a demo source only if no Java files exist in src/
-if ! find src -type f -name "*.java" -print -quit 2>/dev/null | grep -q .; then
-  mkdir -p pipeline/src
-  cat > pipeline/src/Main.java <<'EOF'
-public class Main {
-  public static void main(String[] args) {
-    System.out.println("Hello from Jenkins demo JAR!");
-  }
-}
-EOF
-  echo "Created demo source at pipeline/src/Main.java"
-else
-  echo "Using existing sources under src/"
-fi
-'''
-      }
-    }
-
-    stage('Compile & Package') {
+    stage('Install deps') {
       steps {
         sh '''
 set -eu
-mkdir -p target/classes
-
-if [ -f pipeline/src/Main.java ]; then
-  # Demo single-file build
-  javac -d target/classes pipeline/src/Main.java
-  echo "Main-Class: Main" > target/manifest.mf
+if [ -f package-lock.json ]; then
+  npm ci
+elif [ -f package.json ]; then
+  npm install
 else
-  # Generic compile for any src/* Java tree
-  SRC_LIST="$(find src -type f -name "*.java")"
-  [ -n "$SRC_LIST" ] || { echo "No Java sources found"; exit 1; }
-  javac -d target/classes $SRC_LIST
-  # TODO: change to your actual entry class when you have one:
-  echo "Main-Class: com.example.Main" > target/manifest.mf
+  echo "No package.json found — skipping install"
 fi
-
-jar cfm target/app.jar target/manifest.mf -C target/classes .
-ls -lh target/app.jar
 '''
       }
     }
 
-    stage('Run JAR') {
+    stage('Run (background)') {
       steps {
-        sh 'java -jar target/app.jar'
+        sh '''
+set -eu
+[ -f "$NODE_FILE" ] || { echo "Missing $NODE_FILE"; exit 1; }
+
+# stop previous run if still alive
+if [ -f app.pid ] && ps -p "$(cat app.pid)" >/dev/null 2>&1; then
+  kill "$(cat app.pid)" || true
+  sleep 2
+fi
+
+# start in background; log to file
+nohup node "$NODE_FILE" > app.log 2>&1 &
+echo $! > app.pid
+echo "Started Node app, PID=$(cat app.pid)"
+'''
+      }
+    }
+
+    stage('Health check') {
+      steps {
+        sh '''
+# change the URL to your real health endpoint if needed
+for i in $(seq 1 30); do
+  curl -fsS "http://localhost:${APP_PORT}/" && exit 0
+  sleep 1
+done
+echo "App did not become healthy"; exit 1
+'''
       }
     }
   }
 
   post {
-    always {
-      archiveArtifacts artifacts: 'target/app.jar', allowEmptyArchive: true
+    always { archiveArtifacts artifacts: 'app.log', allowEmptyArchive: true }
+    cleanup {
+      // stop background app so the agent is clean
+      sh '''
+if [ -f app.pid ]; then
+  PID=$(cat app.pid) || true
+  if [ -n "$PID" ] && ps -p "$PID" >/dev/null 2>&1; then
+    kill "$PID" || true
+    sleep 2
+  fi
+fi
+'''
     }
   }
 }
