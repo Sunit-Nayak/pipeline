@@ -14,12 +14,12 @@ set -euo pipefail
 mkdir -p target/classes
 
 # ensure we have sources
-if ! find src/main/java -name '*.java' -print -quit | grep -q .; then
-  echo "No .java sources under src/main/java"; exit 1
+if ! find pipeline/src/Main.java -name '*.java' -print -quit | grep -q .; then
+  echo "No .java sources under pipeline/src/Main.java"; exit 1
 fi
 
 # compile
-javac -d target/classes $(find src/main/java -name '*.java')
+javac -d target/classes $(find pipeline/src/Main.java -name '*.java')
 
 # add a manifest with the entry point (change if your main class differs)
 echo "Main-Class: com.example.Main" > target/manifest.mf
